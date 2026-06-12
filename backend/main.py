@@ -64,7 +64,7 @@ async def predict_race_finish(request: PredictionRequest) -> PredictionResponse:
         logger.info(f"Prediction request: driver_id={request.driver_id}, session_key={request.session_key}")
         
         # Validate driver_id is in 2026 grid
-        valid_drivers = [1, 33, 11, 16, 55, 44, 63, 81, 14, 18]
+        valid_drivers = [1, 81, 16, 44, 3, 6, 63, 12, 14, 18, 10, 43, 31, 87, 30, 41, 23, 55, 27, 5, 11, 77]
         if request.driver_id not in valid_drivers:
             raise HTTPException(status_code=400, detail=f"Invalid driver_id: {request.driver_id}")
         
@@ -153,15 +153,27 @@ async def get_2026_grid():
         "season": 2026,
         "grid": [
             {"number": 1, "driver": "Lando Norris", "team": "McLaren", "acronym": "NOR"},
-            {"number": 33, "driver": "Max Verstappen", "team": "Red Bull Racing", "acronym": "VER"},
-            {"number": 11, "driver": "Sergio Perez", "team": "Cadillac", "acronym": "PER"},
-            {"number": 16, "driver": "Charles Leclerc", "team": "Ferrari", "acronym": "LEC"},
-            {"number": 55, "driver": "Carlos Sainz", "team": "Ferrari", "acronym": "SAI"},
-            {"number": 44, "driver": "Lewis Hamilton", "team": "Ferrari", "acronym": "HAM"},
-            {"number": 63, "driver": "George Russell", "team": "Mercedes", "acronym": "RUS"},
             {"number": 81, "driver": "Oscar Piastri", "team": "McLaren", "acronym": "PIA"},
+            {"number": 16, "driver": "Charles Leclerc", "team": "Ferrari", "acronym": "LEC"},
+            {"number": 44, "driver": "Lewis Hamilton", "team": "Ferrari", "acronym": "HAM"},
+            {"number": 3, "driver": "Max Verstappen", "team": "Red Bull Racing", "acronym": "VER"},
+            {"number": 6, "driver": "Isack Hadjar", "team": "Red Bull Racing", "acronym": "HAD"},
+            {"number": 63, "driver": "George Russell", "team": "Mercedes", "acronym": "RUS"},
+            {"number": 12, "driver": "Kimi Antonelli", "team": "Mercedes", "acronym": "ANT"},
             {"number": 14, "driver": "Fernando Alonso", "team": "Aston Martin", "acronym": "ALO"},
             {"number": 18, "driver": "Lance Stroll", "team": "Aston Martin", "acronym": "STR"},
+            {"number": 10, "driver": "Pierre Gasly", "team": "Alpine", "acronym": "GAS"},
+            {"number": 43, "driver": "Franco Colapinto", "team": "Alpine", "acronym": "COL"},
+            {"number": 31, "driver": "Esteban Ocon", "team": "Haas", "acronym": "OCO"},
+            {"number": 87, "driver": "Oliver Bearman", "team": "Haas", "acronym": "BEA"},
+            {"number": 30, "driver": "Liam Lawson", "team": "Racing Bulls (VCARB)", "acronym": "LAW"},
+            {"number": 41, "driver": "Arvid Lindblad", "team": "Racing Bulls (VCARB)", "acronym": "LIN"},
+            {"number": 23, "driver": "Alex Albon", "team": "Williams", "acronym": "ALB"},
+            {"number": 55, "driver": "Carlos Sainz", "team": "Williams", "acronym": "SAI"},
+            {"number": 27, "driver": "Nico Hülkenberg", "team": "Audi", "acronym": "HUL"},
+            {"number": 5, "driver": "Gabriel Bortoleto", "team": "Audi", "acronym": "BOR"},
+            {"number": 11, "driver": "Sergio Pérez", "team": "Cadillac", "acronym": "PER"},
+            {"number": 77, "driver": "Valtteri Bottas", "team": "Cadillac", "acronym": "BOT"},
         ]
     }
 

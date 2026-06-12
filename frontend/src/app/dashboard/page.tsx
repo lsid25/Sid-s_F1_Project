@@ -15,15 +15,27 @@ import DriverStatsCard from "@/components/DriverStatsCard";
 // ─── Mock Driver Roster ───────────────────────────────────────
 const DRIVER_ROSTER = [
   { id: 1, acronym: "NOR", name: "Lando Norris", team: "McLaren", color: "#FF8000", number: 1 },
-  { id: 33, acronym: "VER", name: "Max Verstappen", team: "Red Bull Racing", color: "#3671C6", number: 33 },
-  { id: 11, acronym: "PER", name: "Sergio Perez", team: "Cadillac", color: "#FFD700", number: 11 },
-  { id: 16, acronym: "LEC", name: "Charles Leclerc", team: "Ferrari", color: "#E8002D", number: 16 },
-  { id: 55, acronym: "SAI", name: "Carlos Sainz", team: "Ferrari", color: "#E8002D", number: 55 },
-  { id: 44, acronym: "HAM", name: "Lewis Hamilton", team: "Ferrari", color: "#E8002D", number: 44 },
-  { id: 63, acronym: "RUS", name: "George Russell", team: "Mercedes", color: "#27F4D2", number: 63 },
   { id: 81, acronym: "PIA", name: "Oscar Piastri", team: "McLaren", color: "#FF8000", number: 81 },
+  { id: 16, acronym: "LEC", name: "Charles Leclerc", team: "Ferrari", color: "#E8002D", number: 16 },
+  { id: 44, acronym: "HAM", name: "Lewis Hamilton", team: "Ferrari", color: "#E8002D", number: 44 },
+  { id: 3, acronym: "VER", name: "Max Verstappen", team: "Red Bull Racing", color: "#3671C6", number: 3 },
+  { id: 6, acronym: "HAD", name: "Isack Hadjar", team: "Red Bull Racing", color: "#3671C6", number: 6 },
+  { id: 63, acronym: "RUS", name: "George Russell", team: "Mercedes", color: "#27F4D2", number: 63 },
+  { id: 12, acronym: "ANT", name: "Kimi Antonelli", team: "Mercedes", color: "#27F4D2", number: 12 },
   { id: 14, acronym: "ALO", name: "Fernando Alonso", team: "Aston Martin", color: "#229971", number: 14 },
   { id: 18, acronym: "STR", name: "Lance Stroll", team: "Aston Martin", color: "#229971", number: 18 },
+  { id: 10, acronym: "GAS", name: "Pierre Gasly", team: "Alpine", color: "#0093CC", number: 10 },
+  { id: 43, acronym: "COL", name: "Franco Colapinto", team: "Alpine", color: "#0093CC", number: 43 },
+  { id: 31, acronym: "OCO", name: "Esteban Ocon", team: "Haas", color: "#FFFFFF", number: 31 },
+  { id: 87, acronym: "BEA", name: "Oliver Bearman", team: "Haas", color: "#FFFFFF", number: 87 },
+  { id: 30, acronym: "LAW", name: "Liam Lawson", team: "Racing Bulls (VCARB)", color: "#6692FF", number: 30 },
+  { id: 41, acronym: "LIN", name: "Arvid Lindblad", team: "Racing Bulls (VCARB)", color: "#6692FF", number: 41 },
+  { id: 23, acronym: "ALB", name: "Alex Albon", team: "Williams", color: "#64C4FF", number: 23 },
+  { id: 55, acronym: "SAI", name: "Carlos Sainz", team: "Williams", color: "#64C4FF", number: 55 },
+  { id: 27, acronym: "HUL", name: "Nico Hülkenberg", team: "Audi", color: "#000000", number: 27 },
+  { id: 5, acronym: "BOR", name: "Gabriel Bortoleto", team: "Audi", color: "#000000", number: 5 },
+  { id: 11, acronym: "PER", name: "Sergio Pérez", team: "Cadillac", color: "#FFD700", number: 11 },
+  { id: 77, acronym: "BOT", name: "Valtteri Bottas", team: "Cadillac", color: "#FFD700", number: 77 },
 ];
 
 export default function DashboardPage() {

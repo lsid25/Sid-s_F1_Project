@@ -21,25 +21,42 @@ class PredictionEngine:
     # 2026 Grid with base performance ratings
     DRIVER_GRID = {
         1: {"name": "Lando Norris", "team": "McLaren", "base_rating": 92},
-        33: {"name": "Max Verstappen", "team": "Red Bull Racing", "base_rating": 95},
-        11: {"name": "Sergio Perez", "team": "Cadillac", "base_rating": 85},
-        16: {"name": "Charles Leclerc", "team": "Ferrari", "base_rating": 90},
-        55: {"name": "Carlos Sainz", "team": "Ferrari", "base_rating": 88},
-        44: {"name": "Lewis Hamilton", "team": "Ferrari", "base_rating": 91},
-        63: {"name": "George Russell", "team": "Mercedes", "base_rating": 87},
         81: {"name": "Oscar Piastri", "team": "McLaren", "base_rating": 89},
-        14: {"name": "Fernando Alonso", "team": "Aston Martin", "base_rating": 86},
-        18: {"name": "Lance Stroll", "team": "Aston Martin", "base_rating": 80},
+        16: {"name": "Charles Leclerc", "team": "Ferrari", "base_rating": 91},
+        44: {"name": "Lewis Hamilton", "team": "Ferrari", "base_rating": 93},
+        3: {"name": "Max Verstappen", "team": "Red Bull Racing", "base_rating": 95},
+        6: {"name": "Isack Hadjar", "team": "Red Bull Racing", "base_rating": 78},
+        63: {"name": "George Russell", "team": "Mercedes", "base_rating": 88},
+        12: {"name": "Kimi Antonelli", "team": "Mercedes", "base_rating": 80},
+        14: {"name": "Fernando Alonso", "team": "Aston Martin", "base_rating": 87},
+        18: {"name": "Lance Stroll", "team": "Aston Martin", "base_rating": 79},
+        10: {"name": "Pierre Gasly", "team": "Alpine", "base_rating": 84},
+        43: {"name": "Franco Colapinto", "team": "Alpine", "base_rating": 77},
+        31: {"name": "Esteban Ocon", "team": "Haas", "base_rating": 83},
+        87: {"name": "Oliver Bearman", "team": "Haas", "base_rating": 79},
+        30: {"name": "Liam Lawson", "team": "Racing Bulls (VCARB)", "base_rating": 81},
+        41: {"name": "Arvid Lindblad", "team": "Racing Bulls (VCARB)", "base_rating": 75},
+        23: {"name": "Alex Albon", "team": "Williams", "base_rating": 85},
+        55: {"name": "Carlos Sainz", "team": "Williams", "base_rating": 89},
+        27: {"name": "Nico Hülkenberg", "team": "Audi", "base_rating": 82},
+        5: {"name": "Gabriel Bortoleto", "team": "Audi", "base_rating": 76},
+        11: {"name": "Sergio Pérez", "team": "Cadillac", "base_rating": 84},
+        77: {"name": "Valtteri Bottas", "team": "Cadillac", "base_rating": 81},
     }
     
     # Team performance modifiers (2026 season)
     TEAM_MODIFIERS = {
         "McLaren": 1.05,
-        "Red Bull Racing": 1.08,
+        "Red Bull Racing": 1.06,
         "Ferrari": 1.04,
         "Mercedes": 1.03,
-        "Cadillac": 0.95,
-        "Aston Martin": 0.98,
+        "Cadillac": 0.98,
+        "Aston Martin": 0.99,
+        "Alpine": 0.94,
+        "Haas": 0.92,
+        "Racing Bulls (VCARB)": 0.93,
+        "Williams": 0.97,
+        "Audi": 0.95,
     }
     
     def __init__(self):
