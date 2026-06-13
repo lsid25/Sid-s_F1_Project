@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Turbopack is enabled via --turbopack flag in dev script (Next.js 15+)
 
   // API proxy to avoid CORS issues in development

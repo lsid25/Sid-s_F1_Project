@@ -4,25 +4,11 @@
 // PitWallHeader — Top navigation bar with F1 branding
 // ============================================================
 
-'use client';
-
-import { useState, useEffect } from 'react';
 import { Activity, Radio, Zap } from "lucide-react";
 
 export default function PitWallHeader() {
-  const [timeStr, setTimeStr] = useState(() => {
-    const now = new Date();
-    return now.toLocaleTimeString("en-GB", { hour12: false });
-  });
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeStr(now.toLocaleTimeString("en-GB", { hour12: false }));
-    };
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-GB", { hour12: false });
 
   return (
     <header
@@ -89,7 +75,7 @@ export default function PitWallHeader() {
         </div>
 
         {/* ── Right: Stats ────────────────────────────────────── */}
-        <div className="flex items-center gap-4" suppressHydrationWarning>
+        <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
             <Radio size={12} style={{ color: "var(--f1-neon-blue)" }} />
             <span

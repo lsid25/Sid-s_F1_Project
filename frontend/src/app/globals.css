@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/* ============================================================
+   F1 2026 Predictor — Global Styles & Design Tokens
+   Carbon dark theme with neon team-colored accents
+   ============================================================ */
+
+:root {
+  /* Carbon Palette */
+  --f1-carbon-900: #0a0a0b;
+  --f1-carbon-800: #111113;
+  --f1-carbon-700: #1a1a1e;
+  --f1-carbon-600: #242428;
+  --f1-carbon-500: #2e2e34;
+  --f1-carbon-400: #3a3a42;
+
+  /* Neon Accents */
+  --f1-neon-red: #e8002d;
+  --f1-neon-green: #39ff14;
+  --f1-neon-blue: #00d4ff;
+  --f1-neon-orange: #ff8000;
+  --f1-neon-yellow: #ffd700;
+  --f1-neon-purple: #bf5af2;
+
+  /* Silver / Neutral */
+  --f1-silver: #c8c8d0;
+  --f1-silver-dim: #6e6e7a;
+  --f1-white: #f5f5f7;
+
+  /* Semantic */
+  --f1-derating: #ff4444;
+  --f1-drs-active: #39ff14;
+  --f1-pit: #ffd700;
+
+  --background: #0a0a0b;
+  --foreground: #c8c8d0;
+}
+
+/* ─── Scrollbar Styling ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--f1-carbon-800);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--f1-carbon-400);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--f1-neon-red);
+}
+
+/* ─── Base Resets ───────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  background-color: var(--f1-carbon-900);
+  color: var(--f1-silver);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* ─── Neon Glow Utilities ───────────────────────────────── */
+.glow-red {
+  box-shadow: 0 0 12px rgba(232, 0, 45, 0.5), 0 0 24px rgba(232, 0, 45, 0.2);
+}
+.glow-green {
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.5), 0 0 24px rgba(57, 255, 20, 0.2);
+}
+.glow-blue {
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.5), 0 0 24px rgba(0, 212, 255, 0.2);
+}
+.text-glow-red {
+  text-shadow: 0 0 8px rgba(232, 0, 45, 0.8);
+}
+.text-glow-green {
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.8);
+}
+
+/* ─── Carbon Card ───────────────────────────────────────── */
+.carbon-card {
+  background: linear-gradient(
+    135deg,
+    var(--f1-carbon-700) 0%,
+    var(--f1-carbon-800) 100%
+  );
+  border: 1px solid var(--f1-carbon-500);
+  border-radius: 8px;
+}
+
+/* ─── Pit Wall Grid Lines ───────────────────────────────── */
+.pit-wall-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Recharts Override ─────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ─── Animated Status Dot ───────────────────────────────── */
+@keyframes pulse-neon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.status-live {
+  animation: pulse-neon 1.5s ease-in-out infinite;
+}
+
+/* ─── Derating Highlight ────────────────────────────────── */
+.derating-zone {
+  background: rgba(255, 68, 68, 0.08);
+  border-left: 2px solid var(--f1-derating);
+}
+
+/* ─── Gradient Borders ──────────────────────────────────── */
+.border-gradient-red {
+  border-image: linear-gradient(to right, #e8002d, transparent) 1;
+}

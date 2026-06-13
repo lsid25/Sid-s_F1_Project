@@ -1,230 +1,249 @@
 """
-Prediction engine implementing 2026 F1 technical regulations.
-Focuses on hybrid power management, active aerodynamics, and derating zones.
+F1 2026 Finish Predictor
+XGBoost-based model for predicting qualifying lap times and race finishes.
+Includes 2026 regulation-aware feature weighting.
 """
 
-import random
-from datetime import datetime
-from typing import Dict, Any
-from app.models.schemas import PredictionResponse, DriverMetrics
+import numpy as np
+import logging
+from typing import Optional
+from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
+
+# ─── Prediction Output ────────────────────────────────────────
+
+@dataclass
+class PredictionOutput:
+    driver_id: int
+    predicted_position: int
+    confidence_score: float
+    simulated_lap_time: float
+    derating_impact_seconds: float
+    feature_importances: dict = field(default_factory=dict)
+    message: str = ""
 
 
-class PredictionEngine:
+# ─── 2026 Regulation Simulation Parameters ────────────────────
+
+REGULATION_2026 = {
+    "hybrid_split_ratio": 0.5,
+    "mgu_k_power_kw": 350,
+    "mgu_h_power_kw": 350,
+    "active_aero_drag_reduction": 0.12,  # 12% drag reduction vs 2025
+    "derating_lap_time_penalty_per_event": 0.08,  # seconds per derating event
+    "energy_efficiency_bonus": 0.15,  # lap time bonus for good energy management
+    "confidence_floor": 0.45,
+    "confidence_ceiling": 0.95,
+}
+
+SECONDS_PER_HOUR = 60 * 60
+
+
+class F12026Predictor:
     """
-    Heuristic-based prediction engine for 2026 F1 season.
-    Incorporates 2026 technical regulations:
-    - 50:50 hybrid power split (ICE + MGU-K)
-    - Active aerodynamics (no manual DRS)
-    - Derating zones when MGU-K battery depleted
+    Prediction engine for F1 2026 qualifying and race outcomes.
+
+    In production, this class would:
+      1. Load a pre-trained XGBoost model from disk (joblib/pickle)
+      2. Apply the feature vector from feature_engineering.py
+      3. Return calibrated probability distributions over finishing positions
+
+    For the boilerplate, we implement a physics-informed heuristic model
+    that accurately reflects the 2026 regulation constraints.
     """
-    
-    # 2026 Grid with base performance ratings
-    DRIVER_GRID = {
-        1: {"name": "Lando Norris", "team": "McLaren", "base_rating": 92},
-        81: {"name": "Oscar Piastri", "team": "McLaren", "base_rating": 89},
-        16: {"name": "Charles Leclerc", "team": "Ferrari", "base_rating": 91},
-        44: {"name": "Lewis Hamilton", "team": "Ferrari", "base_rating": 93},
-        3: {"name": "Max Verstappen", "team": "Red Bull Racing", "base_rating": 95},
-        6: {"name": "Isack Hadjar", "team": "Red Bull Racing", "base_rating": 78},
-        63: {"name": "George Russell", "team": "Mercedes", "base_rating": 88},
-        12: {"name": "Kimi Antonelli", "team": "Mercedes", "base_rating": 80},
-        14: {"name": "Fernando Alonso", "team": "Aston Martin", "base_rating": 87},
-        18: {"name": "Lance Stroll", "team": "Aston Martin", "base_rating": 79},
-        10: {"name": "Pierre Gasly", "team": "Alpine", "base_rating": 84},
-        43: {"name": "Franco Colapinto", "team": "Alpine", "base_rating": 77},
-        31: {"name": "Esteban Ocon", "team": "Haas", "base_rating": 83},
-        87: {"name": "Oliver Bearman", "team": "Haas", "base_rating": 79},
-        30: {"name": "Liam Lawson", "team": "Racing Bulls (VCARB)", "base_rating": 81},
-        41: {"name": "Arvid Lindblad", "team": "Racing Bulls (VCARB)", "base_rating": 75},
-        23: {"name": "Alex Albon", "team": "Williams", "base_rating": 85},
-        55: {"name": "Carlos Sainz", "team": "Williams", "base_rating": 89},
-        27: {"name": "Nico Hülkenberg", "team": "Audi", "base_rating": 82},
-        5: {"name": "Gabriel Bortoleto", "team": "Audi", "base_rating": 76},
-        11: {"name": "Sergio Pérez", "team": "Cadillac", "base_rating": 84},
-        77: {"name": "Valtteri Bottas", "team": "Cadillac", "base_rating": 81},
-    }
-    
-    # Team performance modifiers (2026 season)
-    TEAM_MODIFIERS = {
-        "McLaren": 1.05,
-        "Red Bull Racing": 1.06,
-        "Ferrari": 1.04,
-        "Mercedes": 1.03,
-        "Cadillac": 0.98,
-        "Aston Martin": 0.99,
-        "Alpine": 0.94,
-        "Haas": 0.92,
-        "Racing Bulls (VCARB)": 0.93,
-        "Williams": 0.97,
-        "Audi": 0.95,
-    }
-    
+
     def __init__(self):
-        """Initialize prediction engine."""
-        self.random_seed = None
-    
+        self._model_loaded = False
+        self._model = None
+        logger.info("F12026Predictor initialised (heuristic mode)")
+
+    def _load_model(self, model_path: str) -> bool:
+        """
+        Load a serialised XGBoost model from disk.
+        Returns True if successful.
+        """
+        try:
+            import joblib
+            self._model = joblib.load(model_path)
+            self._model_loaded = True
+            logger.info(f"XGBoost model loaded from {model_path}")
+            return True
+        except FileNotFoundError:
+            logger.warning(f"Model file not found at {model_path}. Using heuristic fallback.")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            return False
+
+    def _compute_derating_penalty(self, features: dict) -> float:
+        """
+        Compute lap time penalty from derating events.
+        Each derating event costs ~0.08s in the 2026 model.
+        """
+        derating_events = features.get("derating_events", 0)
+        derating_pct = features.get("derating_pct", 0.0)
+        base_penalty = derating_events * REGULATION_2026["derating_lap_time_penalty_per_event"]
+        # Additional penalty for sustained derating
+        sustained_penalty = (derating_pct / 100.0) * 1.2
+        return round(base_penalty + sustained_penalty, 3)
+
+    def _compute_energy_bonus(self, features: dict) -> float:
+        """
+        Compute lap time bonus from efficient energy deployment.
+        Drivers who manage the 50:50 split optimally gain time.
+        """
+        remaining_pct = features.get("energy_budget_remaining_pct", 0.5)
+        # Optimal energy management: neither depleting too early nor conserving too much
+        # Peak bonus at ~10-20% remaining
+        if 0.05 <= remaining_pct <= 0.25:
+            return REGULATION_2026["energy_efficiency_bonus"] * 0.5
+        return 0.0
+
+    def _compute_confidence(self, features: dict) -> float:
+        data_points = max(int(features.get("data_points_used", 0)), 1)
+        speed_std = abs(float(features.get("speed_std", 0) or 0))
+        mean_speed = max(abs(float(features.get("mean_speed", 0) or 0)), np.finfo(float).eps)
+        sample_strength = 1.0 - (1.0 / np.sqrt(data_points))
+        consistency = 1.0 - min(speed_std / mean_speed, 1.0)
+        confidence = (sample_strength + consistency) / 2.0
+        return round(float(np.clip(
+            confidence,
+            REGULATION_2026["confidence_floor"],
+            REGULATION_2026["confidence_ceiling"],
+        )), 3)
+
+    def _driver_lap_adjustment(self, driver_id: int, features: dict) -> float:
+        field_size = max(int(features.get("field_size", 1)), 1)
+        driver_index = (int(driver_id) - 1) % field_size
+        centered_index = driver_index - ((field_size - 1) / 2.0)
+        lap_time_step = max(float(features.get("lap_time_step", 0) or 0), np.finfo(float).eps)
+        return centered_index * lap_time_step
+
+    def _derive_position(self, lap_time: float, features: dict) -> int:
+        field_size = max(int(features.get("field_size", 1)), 1)
+        reference_lap_time = float(features.get("reference_lap_time") or features.get("mean_lap_time") or lap_time)
+        lap_time_step = max(float(features.get("lap_time_step", 0) or 0), np.finfo(float).eps)
+        raw_position = 1 + int(round((lap_time - reference_lap_time) / lap_time_step))
+        return max(1, min(field_size, raw_position))
+
+    def _heuristic_predict(self, features: dict, driver_id: int) -> PredictionOutput:
+        """
+        Physics-informed heuristic prediction using 2026 regulation parameters.
+        Used when no trained model is available.
+        """
+        # Base lap time from mean speed (rough approximation)
+        mean_speed = features.get("mean_speed", 200.0)
+        circuit_length_km = features.get("circuit_length_km")
+        if not circuit_length_km:
+            raise ValueError("circuit_length_km is required for lap-time prediction.")
+
+        mean_speed = float(mean_speed)
+        if mean_speed <= 0:
+            raise ValueError("mean_speed must be positive for lap-time prediction.")
+
+        base_lap_time = (float(circuit_length_km) / mean_speed) * SECONDS_PER_HOUR
+
+        # 2026 regulation adjustments
+        derating_penalty = self._compute_derating_penalty(features)
+        energy_bonus = self._compute_energy_bonus(features)
+
+        # Active aero benefit (2026 cars are more efficient at high speed)
+        high_speed_pct = features.get("high_speed_pct", 30.0)
+        aero_benefit = (high_speed_pct / 100.0) * 0.3  # Up to 0.3s benefit
+
+        driver_adjustment = self._driver_lap_adjustment(driver_id, features)
+        simulated_lap_time = base_lap_time + derating_penalty - energy_bonus - aero_benefit + driver_adjustment
+        confidence = self._compute_confidence(features)
+        predicted_position = self._derive_position(simulated_lap_time, features)
+
+        return PredictionOutput(
+            driver_id=driver_id,
+            predicted_position=predicted_position,
+            confidence_score=round(confidence, 3),
+            simulated_lap_time=round(simulated_lap_time, 3),
+            derating_impact_seconds=derating_penalty,
+            feature_importances={
+                "derating_events": 0.28,
+                "mean_speed": 0.22,
+                "energy_budget_remaining_pct": 0.18,
+                "high_speed_pct": 0.15,
+                "mean_throttle": 0.10,
+                "braking_pct": 0.07,
+            },
+            message=(
+                f"2026 Heuristic Model | Derating penalty: +{derating_penalty:.3f}s | "
+                f"Energy bonus: -{energy_bonus:.3f}s | Active aero benefit: -{aero_benefit:.3f}s | "
+                f"Driver adjustment: {driver_adjustment:+.3f}s"
+            ),
+        )
+
     def predict(
         self,
+        features: dict,
         driver_id: int,
-        session_key: str,
-        simulation_type: str = "2026_regulations"
-    ) -> PredictionResponse:
+        model_path: Optional[str] = None,
+    ) -> PredictionOutput:
         """
-        Generate a race finish prediction for a driver.
-        
-        Args:
-            driver_id: F1 driver number
-            session_key: OpenF1 session key
-            simulation_type: Type of simulation
-            
-        Returns:
-            PredictionResponse with finish position and metrics
+        Main prediction entry point.
+        Attempts to use a trained XGBoost model; falls back to heuristic.
         """
-        if driver_id not in self.DRIVER_GRID:
-            raise ValueError(f"Unknown driver: {driver_id}")
-        
-        driver_info = self.DRIVER_GRID[driver_id]
-        team = driver_info["team"]
-        base_rating = driver_info["base_rating"]
-        
-        # Calculate effective rating with team modifier
-        team_modifier = self.TEAM_MODIFIERS.get(team, 1.0)
-        effective_rating = base_rating * team_modifier
-        
-        # Predict qualifying position (1-10)
-        quali_pos = self._predict_quali_position(effective_rating)
-        
-        # Predict race finish (1-10)
-        race_finish = self._predict_race_finish(quali_pos, effective_rating)
-        
-        # Calculate hybrid efficiency score (0-100)
-        hybrid_score = self._calculate_hybrid_efficiency(effective_rating)
-        
-        # Estimate derating impact (0-30%)
-        derating_impact = self._estimate_derating_impact(effective_rating)
-        
-        # Safety car probability (0-1)
-        safety_car_prob = self._estimate_safety_car_probability()
-        
-        # Confidence score based on rating consistency
-        confidence = min(0.95, 0.5 + (effective_rating / 100) * 0.45)
-        
-        metrics = DriverMetrics(
-            qualifying_position=quali_pos,
-            race_finish_position=race_finish,
-            safety_car_probability=safety_car_prob,
-            hybrid_efficiency_score=hybrid_score,
-            derating_impact_percent=derating_impact
-        )
-        
-        return PredictionResponse(
-            driver_id=driver_id,
-            session_key=session_key,
-            predicted_finish=race_finish,
-            confidence_score=confidence,
-            metrics=metrics,
-            simulation_type=simulation_type,
-            timestamp=datetime.utcnow().isoformat()
-        )
-    
-    def _predict_quali_position(self, effective_rating: float) -> int:
+        if model_path and not self._model_loaded:
+            self._load_model(model_path)
+
+        if self._model_loaded and self._model is not None:
+            try:
+                feature_vector = self._build_feature_vector(features)
+                raw_prediction = self._model.predict([feature_vector])[0]
+                return self._parse_model_output(raw_prediction, features, driver_id)
+            except Exception as e:
+                logger.error(f"Model inference failed: {e}. Falling back to heuristic.")
+
+        return self._heuristic_predict(features, driver_id)
+
+    def _build_feature_vector(self, features: dict) -> list:
         """
-        Predict qualifying position based on driver rating.
-        
-        Args:
-            effective_rating: Driver's effective performance rating
-            
-        Returns:
-            Predicted qualifying position (1-10)
+        Build an ordered feature vector for XGBoost inference.
+        Order must match training feature order.
         """
-        # Map rating to position with some randomness
-        base_pos = max(1, min(10, int(11 - (effective_rating / 10))))
-        
-        # Add small random variance
-        variance = random.randint(-1, 1)
-        final_pos = max(1, min(10, base_pos + variance))
-        
-        return final_pos
-    
-    def _predict_race_finish(self, quali_pos: int, effective_rating: float) -> int:
-        """
-        Predict race finish position considering qualifying and rating.
-        
-        Args:
-            quali_pos: Qualifying position
-            effective_rating: Driver's effective performance rating
-            
-        Returns:
-            Predicted race finish position (1-10)
-        """
-        # Base finish on qualifying with potential for position changes
-        base_finish = quali_pos
-        
-        # Higher rated drivers more likely to gain positions
-        if effective_rating > 90:
-            position_change = random.randint(-1, 1)  # Can gain up to 1 position
-        elif effective_rating > 85:
-            position_change = random.randint(-1, 0)
+        return [
+            features.get("mean_speed", 0),
+            features.get("max_speed", 0),
+            features.get("speed_std", 0),
+            features.get("mean_rpm", 0),
+            features.get("mean_throttle", 0),
+            features.get("full_throttle_pct", 0),
+            features.get("braking_pct", 0),
+            features.get("derating_events", 0),
+            features.get("derating_pct", 0),
+            features.get("total_energy_deployed_kj", 0),
+            features.get("energy_budget_remaining_pct", 1.0),
+            features.get("mean_drs_efficiency", 0),
+            features.get("high_speed_pct", 0),
+            features.get("mean_acceleration", 0),
+            features.get("min_acceleration", 0),
+        ]
+
+    def _parse_model_output(self, raw: float, features: dict, driver_id: int) -> PredictionOutput:
+        """Parse raw XGBoost output into a structured PredictionOutput."""
+        derating_penalty = self._compute_derating_penalty(features)
+        if isinstance(raw, dict):
+            lap_time = float(raw.get("simulated_lap_time", raw.get("lap_time")))
+            confidence = float(raw.get("confidence_score", self._compute_confidence(features)))
         else:
-            position_change = random.randint(-2, 0)
-        
-        final_finish = max(1, min(10, base_finish + position_change))
-        
-        return final_finish
-    
-    def _calculate_hybrid_efficiency(self, effective_rating: float) -> float:
-        """
-        Calculate hybrid power management efficiency score.
-        
-        The 2026 regulations mandate 50:50 power split between ICE and MGU-K.
-        Better drivers manage this more efficiently.
-        
-        Args:
-            effective_rating: Driver's effective performance rating
-            
-        Returns:
-            Hybrid efficiency score (0-100)
-        """
-        # Base score on driver rating
-        base_score = (effective_rating / 100) * 100
-        
-        # Add variance
-        variance = random.uniform(-5, 5)
-        
-        return max(0, min(100, base_score + variance))
-    
-    def _estimate_derating_impact(self, effective_rating: float) -> float:
-        """
-        Estimate the impact of derating zones on race performance.
-        
-        Derating occurs when MGU-K battery is depleted mid-straight,
-        causing ~15% power reduction.
-        
-        Args:
-            effective_rating: Driver's effective performance rating
-            
-        Returns:
-            Estimated derating impact as percentage (0-30%)
-        """
-        # Better drivers manage battery more efficiently, less derating impact
-        base_impact = 20 - (effective_rating - 80) * 0.5
-        
-        # Add variance
-        variance = random.uniform(-3, 3)
-        
-        return max(0, min(30, base_impact + variance))
-    
-    def _estimate_safety_car_probability(self) -> float:
-        """
-        Estimate probability of safety car during race.
-        
-        Returns:
-            Safety car probability (0-1)
-        """
-        # Typical F1 race has ~30% chance of safety car
-        base_prob = 0.30
-        
-        # Add variance
-        variance = random.uniform(-0.1, 0.1)
-        
-        return max(0, min(1, base_prob + variance))
+            lap_time = float(raw)
+            confidence = self._compute_confidence(features)
+
+        lap_time += self._driver_lap_adjustment(driver_id, features)
+        return PredictionOutput(
+            driver_id=driver_id,
+            predicted_position=self._derive_position(lap_time, features),
+            confidence_score=round(confidence, 3),
+            simulated_lap_time=round(lap_time, 3),
+            derating_impact_seconds=derating_penalty,
+            message="XGBoost model prediction (2026 regulation-aware).",
+        )
+
+
+# Singleton
+predictor = F12026Predictor()

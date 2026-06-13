@@ -1,16 +1,18 @@
-import next from 'eslint-config-next';
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-export default [
-  next,
-  {
-    rules: {
-      'react/no-unescaped-entities': 'off',
-      'react-hooks/exhaustive-deps': 'off',
-      'react-hooks/rules-of-hooks': 'off',
-      // Disable the setState in effect warning for now
-      'react/no-unknown-property': ['error', { ignore: ['jsx', 'global'] }],
-      'react/jsx-no-target-blank': 'off',
-      'react/display-name': 'off',
-    },
-  },
-];
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
