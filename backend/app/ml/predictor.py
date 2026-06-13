@@ -1,3 +1,4 @@
+
 """
 F1 2026 Finish Predictor
 XGBoost-based model for predicting qualifying lap times and race finishes.
@@ -127,7 +128,7 @@ class F12026Predictor:
         raw_position = 1 + int(round((lap_time - reference_lap_time) / lap_time_step))
         return max(1, min(field_size, raw_position))
 
-    def _heuristic_predict(self, features: dict, driver_id: int) -> PredictionOutput:
+    def _heuristic_predict(self, features: dict, driver_id: int, year: int, round_num: int) -> PredictionOutput:
         """
         Physics-informed heuristic prediction using 2026 regulation parameters.
         Used when no trained model is available.
@@ -170,6 +171,10 @@ class F12026Predictor:
                 "high_speed_pct": 0.15,
                 "mean_throttle": 0.10,
                 "braking_pct": 0.07,
+                "driver_points": features.get("driver_points", 0),
+                "driver_wins": features.get("driver_wins", 0),
+                "constructor_points": features.get("constructor_points", 0),
+                "constructor_wins": features.get("constructor_wins", 0),
             },
             message=(
                 f"2026 Heuristic Model | Derating penalty: +{derating_penalty:.3f}s | "
@@ -178,10 +183,12 @@ class F12026Predictor:
             ),
         )
 
-    def predict(
+    async def predict(
         self,
         features: dict,
         driver_id: int,
+        year: int,
+        round_num: int,
         model_path: Optional[str] = None,
     ) -> PredictionOutput:
         """
@@ -199,7 +206,7 @@ class F12026Predictor:
             except Exception as e:
                 logger.error(f"Model inference failed: {e}. Falling back to heuristic.")
 
-        return self._heuristic_predict(features, driver_id)
+        return self._heuristic_predict(features, driver_id, year, round_num)
 
     def _build_feature_vector(self, features: dict) -> list:
         """
@@ -222,10 +229,16 @@ class F12026Predictor:
             features.get("high_speed_pct", 0),
             features.get("mean_acceleration", 0),
             features.get("min_acceleration", 0),
+            features.get("driver_points", 0),
+            features.get("driver_wins", 0),
+            features.get("constructor_points", 0),
+            features.get("constructor_wins", 0),
         ]
 
     def _parse_model_output(self, raw: float, features: dict, driver_id: int) -> PredictionOutput:
-        """Parse raw XGBoost output into a structured PredictionOutput."""
+        """
+        Parse raw XGBoost output into a structured PredictionOutput.
+        """
         derating_penalty = self._compute_derating_penalty(features)
         if isinstance(raw, dict):
             lap_time = float(raw.get("simulated_lap_time", raw.get("lap_time")))

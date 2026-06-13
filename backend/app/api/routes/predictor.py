@@ -50,6 +50,8 @@ CIRCUIT_LENGTHS_KM = {
 
 class PredictionRequest(BaseModel):
     session_key: str = Field(..., description="OpenF1 session key (e.g. '9159' or 'latest')")
+    year: int = Field(..., description="Year of the session (e.g., 2024)")
+    round_num: int = Field(..., description="Round number of the session (e.g., 1 for Bahrain)")
     driver_id: int = Field(..., ge=1, le=99, description="F1 driver number (1-99)")
     circuit: Optional[str] = Field(default=None, description="Circuit name for lap-time normalization")
     session_type: Optional[str] = Field(default=None, description="Session type for simulation context")
@@ -65,6 +67,8 @@ class PredictionRequest(BaseModel):
 
 
 class SimulationRequest(BaseModel):
+    year: int = Field(..., description="Year of the session (e.g., 2024)")
+    round_num: int = Field(..., description="Round number of the session (e.g., 1 for Bahrain)")
     driver_1: int = Field(..., ge=1, le=99, description="First F1 driver number")
     driver_2: int = Field(..., ge=1, le=99, description="Second F1 driver number")
     circuit: str = Field(..., description="Circuit name")
@@ -124,6 +128,8 @@ async def run_simulation(request: SimulationRequest):
         _run_prediction(PredictionRequest(
             session_key=request.session_key,
             driver_id=request.driver_1,
+            year=request.year,
+            round_num=request.round_num,
             circuit=request.circuit,
             session_type=request.session_type,
             field_size=2,
@@ -133,6 +139,8 @@ async def run_simulation(request: SimulationRequest):
         _run_prediction(PredictionRequest(
             session_key=request.session_key,
             driver_id=request.driver_2,
+            year=request.year,
+            round_num=request.round_num,
             circuit=request.circuit,
             session_type=request.session_type,
             field_size=2,
@@ -177,7 +185,7 @@ async def _run_prediction(request: PredictionRequest) -> PredictionResponse:
         data_points = len(raw_car_data)
 
         # ── Step 2: Feature Engineering ───────────────────────
-        enriched_df = engineer_features(raw_car_data)
+        enriched_df = await engineer_features(raw_car_data, request.year, request.round_num)
         features = extract_lap_features(enriched_df, raw_lap_data)
 
         if not features:
@@ -189,9 +197,11 @@ async def _run_prediction(request: PredictionRequest) -> PredictionResponse:
         _add_request_features(features, request, data_points)
 
         # ── Step 3: Prediction ────────────────────────────────
-        result = predictor.predict(
+        result = await predictor.predict(
             features=features,
             driver_id=request.driver_id,
+            year=request.year,
+            round_num=request.round_num,
             model_path=request.model_path,
         )
 

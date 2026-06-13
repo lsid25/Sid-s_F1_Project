@@ -1,3 +1,4 @@
+
 """
 Feature Engineering Pipeline
 Transforms raw OpenF1 telemetry into ML-ready features,
@@ -8,6 +9,8 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 import logging
+from datetime import datetime
+from app.services.ergast_client import ergast_client
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +87,7 @@ def compute_drs_efficiency(df: pd.DataFrame) -> pd.Series:
     return drs_active * (df["speed"] / 350.0)  # Normalised by max speed
 
 
-def engineer_features(raw_car_data: list[dict]) -> pd.DataFrame:
+async def engineer_features(raw_car_data: list[dict], year: int, round_num: int) -> pd.DataFrame:
     """
     Full feature engineering pipeline for a single driver's car data.
 
@@ -102,6 +105,7 @@ def engineer_features(raw_car_data: list[dict]) -> pd.DataFrame:
       - rpm_normalised
       - high_speed_flag (speed > 280 km/h)
       - braking_flag
+      - driver_points, driver_wins, constructor_points, constructor_wins (from Ergast API)
     """
     if not raw_car_data:
         logger.warning("Empty car data received for feature engineering.")
@@ -109,11 +113,42 @@ def engineer_features(raw_car_data: list[dict]) -> pd.DataFrame:
 
     df = pd.DataFrame(raw_car_data)
 
-    # Ensure required columns exist
-    required = ["speed", "rpm", "throttle", "brake", "n_gear", "drs"]
-    for col in required:
+    # Ensure required columns exist and add placeholders for merging
+    required_openf1_cols = ["speed", "rpm", "throttle", "brake", "n_gear", "drs", "driver_number", "constructor_id"]
+    for col in required_openf1_cols:
         if col not in df.columns:
-            df[col] = 0
+            # Provide sensible defaults or infer from context if possible
+            if col == "driver_number":
+                df[col] = raw_car_data[0].get("driver_number", 0) # Assuming consistent driver_number
+            elif col == "constructor_id":
+                df[col] = "unknown" # Placeholder, ideally derived from driver_number or session data
+            else:
+                df[col] = 0
+
+    # Fetch historical data for driver/team statistics from Ergast
+    driver_standings_data = await ergast_client.get_driver_standings(year, round_num)
+    constructor_standings_data = await ergast_client.get_constructor_standings(year, round_num)
+
+    driver_df = pd.DataFrame(driver_standings_data)
+    constructor_df = pd.DataFrame(constructor_standings_data)
+
+    # Add driver and constructor statistics as features
+    if not driver_df.empty:
+        # Ergast driverId is string, OpenF1 driver_number is int. Convert OpenF1 driver_number to string for merge.
+        driver_df["driverId_ergast"] = driver_df["Driver"].apply(lambda x: x["driverId"])
+        df["driver_number_str"] = df["driver_number"].astype(str)
+        df = df.merge(driver_df[["driverId_ergast", "points", "wins"]], left_on="driver_number_str", right_on="driverId_ergast", how="left", suffixes=('_driver', None))
+        df["driver_points"] = df["points"].fillna(0)
+        df["driver_wins"] = df["wins"].fillna(0)
+        df.drop(columns=["driverId_ergast", "points", "wins", "driver_number_str"], inplace=True)
+
+    if not constructor_df.empty:
+        # Ergast constructorId is string, OpenF1 constructor_id is string. Direct merge.
+        constructor_df["constructorId_ergast"] = constructor_df["Constructor"].apply(lambda x: x["constructorId"])
+        df = df.merge(constructor_df[["constructorId_ergast", "points", "wins"]], left_on="constructor_id", right_on="constructorId_ergast", how="left", suffixes=('_constructor', None))
+        df["constructor_points"] = df["points"].fillna(0)
+        df["constructor_wins"] = df["wins"].fillna(0)
+        df.drop(columns=["constructorId_ergast", "points", "wins"], inplace=True)
 
     # ── Derived Kinematics ─────────────────────────────────────
     df["acceleration"] = compute_acceleration(df["speed"])
@@ -189,6 +224,12 @@ def extract_lap_features(
 
         # High-speed performance
         "high_speed_pct": car_df["high_speed_flag"].mean() * 100,
+
+        # Driver/Constructor Statistics
+        "driver_points": car_df["driver_points"].iloc[-1] if "driver_points" in car_df.columns and len(car_df) > 0 else 0,
+        "driver_wins": car_df["driver_wins"].iloc[-1] if "driver_wins" in car_df.columns and len(car_df) > 0 else 0,
+        "constructor_points": car_df["constructor_points"].iloc[-1] if "constructor_points" in car_df.columns and len(car_df) > 0 else 0,
+        "constructor_wins": car_df["constructor_wins"].iloc[-1] if "constructor_wins" in car_df.columns and len(car_df) > 0 else 0,
     }
 
     # Merge lap timing data if available
