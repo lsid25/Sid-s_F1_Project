@@ -119,7 +119,7 @@ async def engineer_features(raw_car_data: list[dict], year: int, round_num: int)
         if col not in df.columns:
             # Provide sensible defaults or infer from context if possible
             if col == "driver_number":
-                df[col] = raw_car_data[0].get("driver_number", 0) # Assuming consistent driver_number
+                df[col] = raw_car_data[0].get("driver_number", 0) if raw_car_data else 0 # Assuming consistent driver_number
             elif col == "constructor_id":
                 df[col] = "unknown" # Placeholder, ideally derived from driver_number or session data
             else:

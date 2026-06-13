@@ -169,8 +169,8 @@ export default function PredictorPanel({
               color: "var(--f1-white)",
             }}
           >
-            {driverRoster.map((d) => (
-              <option key={d.id} value={d.id}>
+            {driverRoster.map((d, index) => (
+              <option key={`${d.id}-${index}`} value={d.id}>
                 #{d.number} {d.acronym} — {d.name}
               </option>
             ))}
@@ -206,8 +206,8 @@ export default function PredictorPanel({
               color: "var(--f1-white)",
             }}
           >
-            {driverRoster.map((d) => (
-              <option key={d.id} value={d.id}>
+            {driverRoster.map((d, index) => (
+              <option key={`${d.id}-${index}`} value={d.id}>
                 #{d.number} {d.acronym} — {d.name}
               </option>
             ))}

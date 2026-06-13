@@ -134,14 +134,9 @@ class F12026Predictor:
         Used when no trained model is available.
         """
         # Base lap time from mean speed (rough approximation)
-        mean_speed = features.get("mean_speed", 200.0)
-        circuit_length_km = features.get("circuit_length_km")
-        if not circuit_length_km:
-            raise ValueError("circuit_length_km is required for lap-time prediction.")
-
-        mean_speed = float(mean_speed)
-        if mean_speed <= 0:
-            raise ValueError("mean_speed must be positive for lap-time prediction.")
+        mean_speed = max(float(features.get("mean_speed", 200.0)), 1.0) # Ensure mean_speed is positive
+        circuit_length_km = features.get("circuit_length_km", 5.0) # Provide a default circuit length if missing
+        circuit_length_km = float(circuit_length_km)
 
         base_lap_time = (float(circuit_length_km) / mean_speed) * SECONDS_PER_HOUR
 

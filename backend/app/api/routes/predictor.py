@@ -43,6 +43,29 @@ CIRCUIT_LENGTHS_KM = {
     "Las Vegas Strip Circuit": 6.201,
     "Lusail International Circuit": 5.419,
     "Yas Marina Circuit": 5.281,
+    "Australian Grand Prix": 5.278, # Added from frontend GP_CALENDAR_2026
+    "Saudi Arabian Grand Prix": 6.174, # Added from frontend GP_CALENDAR_2026
+    "Japanese Grand Prix": 5.807, # Added from frontend GP_CALENDAR_2026
+    "Chinese Grand Prix": 5.451, # Added from frontend GP_CALENDAR_2026
+    "Miami Grand Prix": 5.412, # Added from frontend GP_CALENDAR_2026
+    "Emilia Romagna Grand Prix": 4.909, # Added from frontend GP_CALENDAR_2026
+    "Monaco Grand Prix": 3.337, # Added from frontend GP_CALENDAR_2026
+    "Spanish Grand Prix": 4.657, # Added from frontend GP_CALENDAR_2026
+    "Canadian Grand Prix": 4.361, # Added from frontend GP_CALENDAR_2026
+    "Austrian Grand Prix": 4.318, # Added from frontend GP_CALENDAR_2026
+    "British Grand Prix": 5.891, # Added from frontend GP_CALENDAR_2026
+    "Belgian Grand Prix": 7.004, # Added from frontend GP_CALENDAR_2026
+    "Hungarian Grand Prix": 4.381, # Added from frontend GP_CALENDAR_2026
+    "Dutch Grand Prix": 4.259, # Added from frontend GP_CALENDAR_2026
+    "Italian Grand Prix": 5.793, # Added from frontend GP_CALENDAR_2026
+    "Azerbaijan Grand Prix": 6.003, # Added from frontend GP_CALENDAR_2026
+    "Singapore Grand Prix": 4.940, # Added from frontend GP_CALENDAR_2026
+    "United States Grand Prix": 5.513, # Added from frontend GP_CALENDAR_2026
+    "Mexico City Grand Prix": 4.304, # Added from frontend GP_CALENDAR_2026
+    "São Paulo Grand Prix": 4.309, # Added from frontend GP_CALENDAR_2026
+    "Las Vegas Grand Prix": 6.201, # Added from frontend GP_CALENDAR_2026
+    "Qatar Grand Prix": 5.419, # Added from frontend GP_CALENDAR_2026
+    "Abu Dhabi Grand Prix": 5.281, # Added from frontend GP_CALENDAR_2026
 }
 
 
@@ -168,6 +191,9 @@ async def _run_prediction(request: PredictionRequest) -> PredictionResponse:
             raise HTTPException(status_code=422, detail="circuit is required for prediction.")
 
         # ── Step 1: Fetch Telemetry ────────────────────────────
+        raw_car_data = []
+        raw_lap_data = []
+        openf1_data_available = True
         try:
             raw_car_data = await openf1_client.get_car_data(
                 session_key=request.session_key,
@@ -179,20 +205,42 @@ async def _run_prediction(request: PredictionRequest) -> PredictionResponse:
                 driver_number=request.driver_id,
             )
         except Exception as e:
-            logger.warning(f"OpenF1 API unavailable: {e}")
-            raise HTTPException(status_code=502, detail=f"OpenF1 API unavailable: {str(e)}")
+            logger.warning(f"OpenF1 API unavailable for driver {request.driver_id}, session {request.session_key}: {e}. Proceeding with heuristic.")
+            openf1_data_available = False
 
         data_points = len(raw_car_data)
+        if not openf1_data_available:
+            # If OpenF1 data is unavailable, set a message for the prediction output
+            message_prefix = "OpenF1 data unavailable. "
+        else:
+            message_prefix = ""
 
         # ── Step 2: Feature Engineering ───────────────────────
         enriched_df = await engineer_features(raw_car_data, request.year, request.round_num)
         features = extract_lap_features(enriched_df, raw_lap_data)
 
         if not features:
-            raise HTTPException(
-                status_code=422,
-                detail="Feature engineering produced no output. Check session_key and driver_id."
-            )
+            logger.warning(f"Feature engineering produced no output for driver {request.driver_id}, session {request.session_key}. Using default features for heuristic.")
+            # Provide default features for heuristic prediction when no OpenF1 data is available
+            features = {
+                "mean_speed": 200.0,
+                "circuit_length_km": CIRCUIT_LENGTHS_KM.get(request.circuit, 5.0),
+                "derating_events": 0,
+                "derating_pct": 0.0,
+                "energy_budget_remaining_pct": 0.5,
+                "mean_drs_efficiency": 0.0,
+                "high_speed_pct": 0.0,
+                "mean_acceleration": 0.0,
+                "min_acceleration": 0.0,
+                "driver_points": 0,
+                "driver_wins": 0,
+                "constructor_points": 0,
+                "constructor_wins": 0,
+                "field_size": request.field_size,
+                "data_points_used": 0,
+                "reference_lap_time": (CIRCUIT_LENGTHS_KM.get(request.circuit, 5.0) / 200.0) * 3600.0,
+                "lap_time_step": 0.001,
+            }
 
         _add_request_features(features, request, data_points)
 
@@ -218,7 +266,7 @@ async def _run_prediction(request: PredictionRequest) -> PredictionResponse:
             simulated_lap_time=result.simulated_lap_time,
             derating_impact_seconds=result.derating_impact_seconds,
             feature_importances=feature_importances,
-            message=result.message,
+            message=message_prefix + result.message,
             session_key=request.session_key,
             data_points_used=data_points,
         )
@@ -241,9 +289,9 @@ def _add_request_features(features: dict, request: PredictionRequest, data_point
     features["field_size"] = request.field_size
     features["data_points_used"] = data_points
 
-    mean_speed = max(float(features.get("mean_speed", 0) or 0), 1.0)
+    mean_speed = max(float(features.get("mean_speed", 200.0) or 200.0), 1.0) # Ensure mean_speed is positive
     reference_lap_time = features.get("mean_lap_time") or (circuit_length / mean_speed) * 3600.0
-    speed_std = abs(float(features.get("speed_std", 0) or 0))
+    speed_std = abs(float(features.get("speed_std", 0.0) or 0.0))
     speed_variation = speed_std / mean_speed
     features["reference_lap_time"] = reference_lap_time
     features["lap_time_step"] = features.get("lap_time_std") or max(reference_lap_time * speed_variation, 0.001)

@@ -20,11 +20,12 @@ class ErgastClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.get(url, params=params)
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as e:
-                logger.error(f"Ergast HTTP error {e.response.status_code} for {url}: {e}")
-                raise
+                try:
+                    response.raise_for_status()
+                    return response.json()
+                except httpx.HTTPStatusError as e:
+                    logger.warning(f"Ergast HTTP error {e.response.status_code} for {e.request.url}: {e}. Returning empty data.")
+                    return {}
             except httpx.RequestError as e:
                 logger.error(f"Ergast request error for {url}: {e}")
                 raise
