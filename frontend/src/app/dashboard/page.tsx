@@ -18,18 +18,41 @@ import RegulationBadge from "@/components/RegulationBadge";
 import ApiStatusBadge from "@/components/ApiStatusBadge";
 import DriverStatsCard from "@/components/DriverStatsCard";
 
-// ─── Mock Driver Roster ───────────────────────────────────────
+// ─── 2026 Driver Roster ───────────────────────────────────────
 const DRIVER_ROSTER = [
-  { id: 1, acronym: "VER", name: "Max Verstappen", team: "Red Bull Racing", color: "#3671C6", number: 1 },
-  { id: 11, acronym: "PER", name: "Sergio Perez", team: "Red Bull Racing", color: "#3671C6", number: 11 },
-  { id: 16, acronym: "LEC", name: "Charles Leclerc", team: "Ferrari", color: "#E8002D", number: 16 },
-  { id: 55, acronym: "SAI", name: "Carlos Sainz", team: "Ferrari", color: "#E8002D", number: 55 },
-  { id: 44, acronym: "HAM", name: "Lewis Hamilton", team: "Ferrari", color: "#E8002D", number: 44 },
+  // Mercedes
   { id: 63, acronym: "RUS", name: "George Russell", team: "Mercedes", color: "#27F4D2", number: 63 },
+  { id: 84, acronym: "ANT", name: "Andrea Antonelli", team: "Mercedes", color: "#27F4D2", number: 84 },
+  // Ferrari
+  { id: 44, acronym: "HAM", name: "Lewis Hamilton", team: "Ferrari", color: "#E8002D", number: 44 },
+  { id: 16, acronym: "LEC", name: "Charles Leclerc", team: "Ferrari", color: "#E8002D", number: 16 },
+  // McLaren
   { id: 4, acronym: "NOR", name: "Lando Norris", team: "McLaren", color: "#FF8000", number: 4 },
   { id: 81, acronym: "PIA", name: "Oscar Piastri", team: "McLaren", color: "#FF8000", number: 81 },
+  // Red Bull Racing
+  { id: 1, acronym: "VER", name: "Max Verstappen", team: "Red Bull Racing", color: "#3671C6", number: 1 },
+  { id: 27, acronym: "HAD", name: "Isack Hadjar", team: "Red Bull Racing", color: "#3671C6", number: 27 },
+  // Alpine
+  { id: 10, acronym: "GAS", name: "Pierre Gasly", team: "Alpine", color: "#FF87BC", number: 10 },
+  { id: 43, acronym: "COL", name: "Franco Colapinto", team: "Alpine", color: "#FF87BC", number: 43 },
+  // Racing Bulls
+  { id: 30, acronym: "LAW", name: "Liam Lawson", team: "Racing Bulls", color: "#6692FF", number: 30 },
+  { id: 32, acronym: "LIN", name: "Yuki Lindblad", team: "Racing Bulls", color: "#6692FF", number: 32 },
+  // Haas F1 Team
+  { id: 31, acronym: "OCO", name: "Esteban Ocon", team: "Haas F1 Team", color: "#B6BABD", number: 31 },
+  { id: 26, acronym: "BEA", name: "Oliver Bearman", team: "Haas F1 Team", color: "#B6BABD", number: 26 },
+  // Williams
+  { id: 23, acronym: "ALB", name: "Alexander Albon", team: "Williams", color: "#64C4FF", number: 23 },
+  { id: 55, acronym: "SAI", name: "Carlos Sainz", team: "Williams", color: "#64C4FF", number: 55 },
+  // Audi
+  { id: 27, acronym: "HUL", name: "Nico Hulkenberg", team: "Audi", color: "#52E252", number: 27 },
+  { id: 5, acronym: "BOR", name: "Gabriel Bortoleto", team: "Audi", color: "#52E252", number: 5 },
+  // Aston Martin
   { id: 14, acronym: "ALO", name: "Fernando Alonso", team: "Aston Martin", color: "#229971", number: 14 },
   { id: 18, acronym: "STR", name: "Lance Stroll", team: "Aston Martin", color: "#229971", number: 18 },
+  // Cadillac
+  { id: 77, acronym: "BOT", name: "Valtteri Bottas", team: "Cadillac", color: "#FF6B35", number: 77 },
+  { id: 11, acronym: "PER", name: "Sergio Perez", team: "Cadillac", color: "#FF6B35", number: 11 },
 ];
 
 export default function DashboardPage() {
@@ -55,6 +78,8 @@ export default function DashboardPage() {
 
     try {
       const simulation = await runSimulation({
+        year: 2026,
+        round_num: GP_CALENDAR_2026.indexOf(selectedGP) + 1,
         driver_1: driver1Id,
         driver_2: driver2Id,
         circuit: selectedGP.circuit,
@@ -67,6 +92,8 @@ export default function DashboardPage() {
 
       const telemetry = await getTelemetryComparison(
         selectedGP.sessionKey,
+        2026,
+        GP_CALENDAR_2026.indexOf(selectedGP) + 1,
         driver1Id,
         driver2Id
       );

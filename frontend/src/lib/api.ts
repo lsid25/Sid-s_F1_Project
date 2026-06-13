@@ -37,13 +37,15 @@ export async function runSimulation(
 
 export async function getTelemetryComparison(
   sessionKey: string,
+  year: number,
+  round_num: number,
   driver1: number,
   driver2: number
 ): Promise<ProcessedTelemetry> {
   const response: AxiosResponse<ProcessedTelemetry> = await apiClient.get(
     "/api/telemetry/compare",
     {
-      params: { session_key: sessionKey, driver1, driver2 },
+      params: { session_key: sessionKey, year, round_num, driver1, driver2 },
     }
   );
   return response.data;

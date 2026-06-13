@@ -82,6 +82,8 @@ export type SessionType = "FP1" | "FP2" | "FP3" | "Qualifying" | "Race";
 
 export interface PredictionRequest {
   session_key: string;
+  year: number;
+  round_num: number;
   driver_id: number;
   circuit?: string;
   session_type?: SessionType;
@@ -89,6 +91,8 @@ export interface PredictionRequest {
 }
 
 export interface SimulationRequest {
+  year: number;
+  round_num: number;
   driver_1: number;
   driver_2: number;
   circuit: string;

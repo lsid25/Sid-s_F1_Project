@@ -46,6 +46,8 @@ class TelemetryComparisonResponse(BaseModel):
 @router.get("/compare", response_model=TelemetryComparisonResponse)
 async def get_telemetry_comparison(
     session_key: str = Query(..., description="OpenF1 session key"),
+    year: int = Query(..., description="Year of the session (e.g., 2024)"),
+    round_num: int = Query(..., description="Round number of the session (e.g., 1 for Bahrain)"),
     driver1: int = Query(..., ge=1, le=99, description="First driver number"),
     driver2: int = Query(..., ge=1, le=99, description="Second driver number"),
     limit: int = Query(default=200, ge=10, le=1000, description="Max data points per driver"),
@@ -67,8 +69,8 @@ async def get_telemetry_comparison(
         raise HTTPException(status_code=502, detail=f"OpenF1 API error: {str(e)}")
 
     # Feature engineer both datasets
-    df1 = engineer_features(raw1) if raw1 else _empty_df()
-    df2 = engineer_features(raw2) if raw2 else _empty_df()
+    df1 = await engineer_features(raw1, year, round_num) if raw1 else _empty_df()
+    df2 = await engineer_features(raw2, year, round_num) if raw2 else _empty_df()
 
     # Merge into unified time-series for frontend
     min_len = min(len(df1), len(df2), limit)

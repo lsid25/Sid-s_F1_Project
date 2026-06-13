@@ -33,9 +33,10 @@ export function getTeamColor(teamName: string): string {
     "Aston Martin": "#229971",
     Alpine: "#FF87BC",
     Williams: "#64C4FF",
-    "RB F1 Team": "#6692FF",
-    "Kick Sauber": "#52E252",
+    "Racing Bulls": "#6692FF",
+    Audi: "#52E252",
     "Haas F1 Team": "#B6BABD",
+    Cadillac: "#FF6B35",
   };
   return colors[teamName] ?? "#FFFFFF";
 }
